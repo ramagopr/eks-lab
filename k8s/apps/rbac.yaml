@@ -1,0 +1,19 @@
+# Step 4 – Argo CD now owns the read-only developer RBAC from step 3 (k8s/rbac/).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbac
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ramagopr/eks-lab.git
+    targetRevision: main
+    path: k8s/rbac
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default    # ClusterRole/ClusterRoleBinding are cluster-wide; this is just a required field
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
