@@ -1,0 +1,55 @@
+# Step 5a – sample web app. Later: HPA (step 10), Prometheus scraping (step 9), Kyverno checks (step 8).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  labels:
+    app: podinfo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: podinfo
+  template:
+    metadata:
+      labels:
+        app: podinfo
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1   # pinned tag, never :latest
+          ports:
+            - name: http
+              containerPort: 9898
+          env:
+            - name: PODINFO_UI_MESSAGE
+              value: "Hello from eks-lab, deployed by Argo CD"
+          resources:              # HPA needs requests; Kyverno will require both later
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          readinessProbe:         # only send traffic once the app is ready
+            httpGet:
+              path: /readyz
+              port: http
+          livenessProbe:          # restart the container if it hangs
+            httpGet:
+              path: /healthz
+              port: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  labels:
+    app: podinfo
+spec:
+  selector:
+    app: podinfo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
