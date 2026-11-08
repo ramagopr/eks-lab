@@ -6,7 +6,7 @@ metadata:
   labels:
     app: podinfo
 spec:
-  replicas: 2
+  # replicas: not set – the HPA (hpa.yaml) controls the number of pods
   selector:
     matchLabels:
       app: podinfo

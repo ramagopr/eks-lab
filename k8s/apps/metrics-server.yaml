@@ -1,0 +1,20 @@
+# HPA step – metrics-server collects CPU/memory from every kubelet and serves the
+# Kubernetes Metrics API. HPA and "kubectl top" read from it. Without it, HPA shows <unknown>.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/   # a Helm chart repo, not Git
+    chart: metrics-server
+    targetRevision: 3.12.2                                         # chart version, pinned
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
