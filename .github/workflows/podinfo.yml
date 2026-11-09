@@ -1,0 +1,62 @@
+# Step 5b – build, scan, push to ECR, then hand over to Argo CD by updating the image tag in Git.
+name: podinfo
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**"]          # only app changes trigger a build (so the bot's own commit to k8s/ doesn't loop)
+  workflow_dispatch: {}        # "Run workflow" button in the Actions tab
+
+permissions:
+  id-token: write              # needed to get the OIDC token for AWS
+  contents: write              # needed to push the image-tag commit
+
+concurrency:
+  group: podinfo-main
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: podinfo
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume AWS role via OIDC (no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          IMAGE="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${TAG}"
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          docker build --build-arg VERSION="${TAG}" -t "${IMAGE}" app
+
+      - name: Trivy scan (report only for now – step 14 makes it blocking)
+        run: |
+          # Trivy is pinned to a fixed version on purpose: never run a security scanner from a moving tag.
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \
+            image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 "${IMAGE}"
+
+      - name: Push image to ECR
+        run: docker push "${IMAGE}"
+
+      - name: Update image tag in Git (Argo CD deploys it)
+        run: |
+          sed -i "s|^\(\s*image:\s*\).*podinfo.*$|\1${IMAGE}|" k8s/podinfo/deployment.yaml
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/podinfo/deployment.yaml
+          git commit -m "podinfo: deploy ${TAG}"
+          git push

@@ -21,9 +21,6 @@ spec:
           ports:
             - name: http
               containerPort: 9898
-          env:
-            - name: PODINFO_UI_MESSAGE
-              value: "Hello from eks-lab, deployed by Argo CD"
           resources:              # HPA needs requests; Kyverno will require both later
             requests:
               cpu: 100m
