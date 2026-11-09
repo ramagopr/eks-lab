@@ -12,6 +12,26 @@ variable "github_repo" {
   default     = "ramagopr/eks-lab"
 }
 
+# GitHub now puts immutable numeric IDs in the OIDC "sub" claim:
+#   repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/main
+# The IDs stop a deleted-and-recreated repo (or renamed account) from inheriting this trust.
+# Find them in a workflow run's token claims, or: gh api repos/ramagopr/eks-lab --jq '.owner.id, .id'
+variable "github_owner_id" {
+  type    = string
+  default = "8437439"
+}
+
+variable "github_repo_id" {
+  type    = string
+  default = "1448030531"
+}
+
+locals {
+  github_owner     = split("/", var.github_repo)[0]
+  github_repo_name = split("/", var.github_repo)[1]
+  github_oidc_sub  = "repo:${local.github_owner}@${var.github_owner_id}/${local.github_repo_name}@${var.github_repo_id}:ref:refs/heads/main"
+}
+
 resource "aws_ecr_repository" "podinfo" {
   name                 = "podinfo"
   image_tag_mutability = "IMMUTABLE" # a tag can never be overwritten – what's deployed is what was scanned
@@ -50,9 +70,11 @@ resource "aws_iam_role" "github_actions" {
       Action    = "sts:AssumeRoleWithWebIdentity"
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Condition = {
-        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        # Only workflows running on the main branch of this one repo
-        StringLike = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/main" }
+        # Only workflows running on the main branch of this one repo (exact match, no wildcards)
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:sub" = local.github_oidc_sub
+        }
       }
     }]
   })
