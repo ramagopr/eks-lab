@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: podinfo
-          image: 070215089441.dkr.ecr.ap-southeast-2.amazonaws.com/podinfo:10fa8b8
+          image: 070215089441.dkr.ecr.ap-southeast-2.amazonaws.com/podinfo:b0844d3
           ports:
             - name: http
               containerPort: 9898
