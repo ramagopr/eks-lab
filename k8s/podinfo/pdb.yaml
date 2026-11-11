@@ -1,0 +1,13 @@
+# Upgrade step – PodDisruptionBudget.
+# When nodes are drained (node group upgrade, Karpenter consolidation), Kubernetes evicts pods
+# one at a time and refuses any eviction that would leave fewer than 1 podinfo pod Ready.
+# Without this, a drain could remove both pods at once → outage.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: podinfo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: podinfo
