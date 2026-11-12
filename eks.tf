@@ -34,7 +34,7 @@ module "eks" {
     general = {
       # Upgrade phase 1: keep workers on 1.36 while the control plane goes to 1.37.
       # Phase 3: delete this line so the node group follows the cluster version.
-      kubernetes_version = "1.36"
+      # kubernetes_version = "1.36"
 
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = ["m7i-flex.large"] # Free plan only allows: t3.micro, t3.small, t4g.micro, t4g.small, c7i-flex.large, m7i-flex.large

@@ -11,7 +11,7 @@ variable "cluster_name" {
 variable "kubernetes_version" {
   description = "Start on 1.36; step 9 upgrades this to 1.37."
   type        = string
-  default     = "1.36"
+  default     = "1.37"
 }
 
 variable "my_ip_cidr" {
